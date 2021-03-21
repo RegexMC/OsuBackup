@@ -1,15 +1,16 @@
 # OsuBackup
 ### Currently, this project only supports saving all beatmap IDs, and not restoring them automatically.
 
+---
+
+Got a response from osu support and unfortunately this app will **not** be able to restore beatmaps automatically, and will not be implemented. If you have any ideas on how to potentially remedy this I'm open for suggestions. Currently in mind I have something that simply watches a folder for .osz files and then extracts them to the osu folder, accompanied by a tool that reads a backup file and opens a tab for each ID every 5-10s (so that it is technically not mass downloading in the same sense? idk).
+
+---
+
 **OsuBackup is a project developed by [@RegexMC](https://twitter.com/regexmc) to backup and restore your osu beatmaps.**
 
 It is intended to be used when resetting your device or when switching devices _permanently_. It is not intended to maintain beatmaps between devices and be used frequently.
 
----
-
-I am currently waiting for a response from osu support to see whether I can continue with this project or not, and if so, what delay I should put in place when downloading beatmaps, if any.
-
----
 ## Usage
 Download the latest release from the [releases page](https://github.com/RegexMC/OsuBackup/releases)
 

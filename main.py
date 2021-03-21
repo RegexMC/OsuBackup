@@ -1,146 +1,106 @@
 from json import dumps
-from os import listdir, getcwd
-from os.path import exists, isfile
+from os import getcwd, listdir
+from os.path import exists, join
 from pathlib import Path
 from re import sub
 
-import bcolors
 
-backup_output_file = getcwd() + "\\OsuBackup.json"
-
-osu_path = str(Path.home()) + "\\AppData\\Local\\osu!\\"
-osu_songs_path = osu_path + "Songs\\"
-
-osu_songs = None
-
-backup_output = {}
-backup_output_ids = []
+class Colors:
+    OK = '\033[92m'
+    WARN = '\033[93m'
+    ERR = '\033[31m'
+    BOLD = '\033[1m'
+    FAIL = ERR + BOLD
 
 
-def check_custom_output_file():
-    global backup_output_file
-
-    while isfile(backup_output_file):
-        backup_output_file = input(
-            bcolors.FAIL + "File already exists! Enter different output file (default OsuBackup.json):\n")
-        while not sub(r'\W+', '', backup_output_file).strip():
-            backup_output_file = input(
-                bcolors.FAIL + "File name invalid! Enter different output file (default OsuBackup.json):\n")
-
-
-def check_custom_osu_directory():
-    global osu_path
-    global osu_songs_path
-    while not exists(osu_path):
-        osu_path = input(bcolors.FAIL + "Invalid directory! Enter different/custom directory here:\n")
-        osu_songs_path = osu_path + "Songs\\"
-
-
+# Reset color in console. end="" is there so there isnt an extra new line
 def reset():
-    print('\033[0m')
+    print('\033[0m', end="")
 
 
-def check_osu_directory():
-    global osu_path
-    global osu_songs_path
-    global osu_songs
-    while not isfile(osu_path + "osu!.exe"):
-        osu_path = input(bcolors.FAIL + "Invalid directory (osu.exe not found)! Enter different/custom osu here:\n")
-        osu_songs_path = osu_path + "Songs\\"
-        reset()
+user_directory = str(Path.home())  # C:/Users/.../
+working_directory = getcwd()  # ./
 
-    while not exists(osu_songs_path):
-        osu_path = input(
-            bcolors.FAIL + "Invalid directory (Songs directory not found)! Enter different/custom osu here:\n")
-        osu_songs_path = osu_path + "Songs\\"
-        reset()
+osu_directory = None  # osu! directory | C:/Users/.../AppData/Local/osu!/
+osu_songs_directory = None  # osu!/Songs/
 
-    # Prevent from needing to check again if songs directory is valid
-    osu_songs = listdir(osu_songs_path)
-    while len(osu_songs) == 0:
-        osu_path = input(bcolors.FAIL + "Invalid directory (Songs directory empty)! Enter different/custom osu "
-                                        "directory here:\n")
-        osu_songs_path = osu_path + "Songs\\"
-        reset()
+ids = []  # List of beatmap IDs
+output = {}  # Object to be written to the output file
+output_path = "OsuBackup_output.json"  # Output file name
 
+input_obj = {}
+input_path = None
 
 if __name__ == '__main__':
+    osu_directory = join(user_directory, "AppData/Local/osu!/")
+
+    while not exists(osu_directory):
+        osu_directory = input(Colors.FAIL + "Directory not found! Enter custom osu directory here:\n")
+    reset()
+
+    osu_songs_directory = join(osu_directory, "Songs")
+    while not exists(osu_songs_directory):
+        osu_songs_directory = input(Colors.FAIL + "Songs directory not found! Enter custom osu songs directory here:\n")
+    reset()
+
     mode = None
+    while mode not in ["0", "1"]:
+        mode = input(Colors.WARN + "Would you like to backup your osu beatmaps or restore them from a previous backup?"
+                                   "(0:backup | 1:restore):\n")
+    reset()
 
-    while not (mode == "0" or mode == "1"):
-        mode = input(
-            "Would you like to backup your osu beatmaps or "
-            "restore them from a previous backup? (0:backup | 1:restore): \n")
-
-    cont = ""
-
-    while not (cont.lower() == "y" or cont.lower() == "n"):
-        if mode == "0":
-            cont = input(
-                bcolors.WARN + "You will be " + bcolors.BOLD + "backing up " + bcolors.WARN + "your osu beatmaps. "
-                                                                                              "Continue (y/n)?\n")
+    proceed = None
+    while proceed not in ["y", "n", "yes", "no"]:
+        if mode:
+            proceed = input(Colors.WARN + "You will be backing up your osu beatmaps. Continue (y/n)?\n")
         else:
-            cont = input(
-                bcolors.WARN + "You will be " + bcolors.BOLD + "restoring " + bcolors.WARN + "your osu beatmaps. "
-                                                                                             "Continue (y/n)?\n")
-    if cont.lower() == "y":
-        if mode == "0":
-            if isfile(backup_output_file):
-                check_custom_output_file()
+            proceed = input(Colors.WARN + "You will be restoring your osu beatmaps. Continue (y/n)?\n")
+    reset()
 
-            print(bcolors.OK + "Output file set to: " + backup_output_file)
+    if proceed in ["y", "yes"]:
+        # Continue
+
+        if mode:
+            # Backup
+
+            while exists(output_path) or not output_path:
+                output_path = sub(r'\W+', '', input(
+                    Colors.FAIL + "File " + output_path +
+                    " already exists! Please enter a different output file:\n")).strip()
             reset()
 
-            # If the default osu directory does not exist
-            if not exists(osu_path):
-                check_custom_osu_directory()
-
-            print(bcolors.OK + "osu! directory: " + osu_path)
+            ids = []
+            # Loop over each folder inside of the osu_songs directory, song_directory_name being each sub folders name
+            for beatmap_folder in listdir(osu_songs_directory):
+                beatmap_set_id = beatmap_folder.split(' ')[0]
+                print(Colors.OK + "Found: " + beatmap_folder)
+                ids.append(beatmap_set_id)
             reset()
 
-            # If the osu directory does not contain osu!.exe or if the songs directory does not exist or is empty.
-            if not isfile(osu_path + "osu!.exe") or not exists(osu_songs_path) or len(listdir(osu_songs_path)) == 0:
-                check_osu_directory()
+            output.update({"beatmapsets": ids})
+            print(output)
 
-            print(bcolors.OK + "osu! directory is valid")
-            reset()
-
-            # Directory was correct from start
-            if osu_songs is None:
-                osu_songs = listdir(osu_songs_path)
-
-            for song_directory_name in osu_songs:
-                beatmap_set_id = song_directory_name.split(' ')[0]
-
-                print(bcolors.ITALIC + "Found: " + song_directory_name)
-                backup_output_ids.append(beatmap_set_id)
-
-            reset()
-            backup_output.update({"beatmapsets": backup_output_ids})
-            print(backup_output)
-            f = open(backup_output_file, "w")
-            f.write(dumps(backup_output))
+            # Create the output file and write the backup output to it
+            f = open(output_path, "w")
+            f.write(dumps(output))
             f.close()
 
-            print(bcolors.OK + "Successfully backed up osu songs to " + backup_output_file)
-            input(bcolors.WARN + "Press enter to close.")
-        else:
-            print("Restoring in progress")
-            print(bcolors.OK + "Restoring not implemented yet.")
-            input(bcolors.WARN + "Press enter to close.")
-            # Restore
-            # TODO:
-            #   - Get each beatmap user already has
-            #   - If any IDS are in the backup, remove them from download queue
-            #   - Let user define delay (min x seconds)
-            #   - Give estimate on time based on download speed & amount of maps & delay
-            #   - Loop over all IDS in the backups 'beatmapsets' array
-            #   - Download .osz from = 'https://osu.ppy.sh/beatmapsets/ID/download'
-            #   - Unzip the .osz file and move into songs folder
-            #   - Delete .osz file
-            #   - Wait however many seconds so as to not get rate limited
-            # ----- I emailed osu support to see what delay if any I should set, and whether I could continue
-            #       this project or not at all and I am waiting for a response ---
-            
+            input("Backup Successful. Press enter to exit.")
     else:
-        quit()
+        # Restore
+        print("Restore")
+        # TODO:
+        #             #   - Get each beatmap user already has
+        #             #   - If any IDS are in the backup, remove them from download queue
+        #             #   - Let user define delay (min x seconds)
+        #             #   - Give estimate on time based on download speed & amount of maps & delay
+        #             #   - Loop over all IDS in the backups 'beatmapsets' array
+        #             #   - Download .osz from = 'https://osu.ppy.sh/beatmapsets/ID/download'
+        #             #   - Unzip the .osz file and move into songs folder
+        #             #   - Delete .osz file
+        #             #   - Wait however many seconds so as to not get rate limited
+        #             # ----- I emailed osu support to see what delay if any I should set, and whether I could continue
+        #             #       this project or not at all and I am waiting for a response ---
+        input("Not made yet. Press enter to exit.")
+else:
+    exit()
